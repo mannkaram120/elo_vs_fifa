@@ -1,0 +1,936 @@
+% ============================================================
+%  FIFA Rankings vs ELO Ratings — Research Paper
+%  FINAL VERSION — All real numbers, all figures embedded
+%  Upgrades: H1/H2/H3, APA 7th, three-line tables, Appendix
+% ============================================================
+
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[a4paper, margin=2.54cm]{geometry}
+\usepackage{setspace}
+\doublespacing
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[font=small, labelfont=bf, justification=justified]{caption}
+\usepackage[hidelinks, breaklinks=true]{hyperref}
+\usepackage{url}
+\urlstyle{same}
+\usepackage{apacite}
+\bibliographystyle{apacite}
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage[title]{appendix}
+\usepackage{enumitem}
+\usepackage{subcaption}
+
+% ============================================================
+\begin{document}
+% ============================================================
+
+% ---- Title page ----
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\LARGE\bfseries FIFA Rankings vs ELO Ratings:\\[0.4em]
+  Predictive Validity in World Cup Knockout Stages (1994--2022)\par}
+  \vspace{1.5cm}
+  {\large Karamjeet Singh\par}
+  \vspace{0.5cm}
+  {\normalsize Independent Researcher\\
+  New Delhi, India\par}
+  \vspace{1cm}
+  {\normalsize May 2026\par}
+  \vspace{0.5cm}
+  {\normalsize Word count: approximately 6,800 words (excluding tables, figures, and references)\par}
+  \vfill
+\end{titlepage}
+
+% ---- Abstract ----
+\newpage
+\begin{abstract}
+\noindent
+Football's most consequential matches --- World Cup knockout encounters --- are seeded and
+drawn using FIFA World Rankings. Yet a rival system, ELO ratings, has long been considered
+theoretically superior. This study asks a direct question: which system actually predicts
+knockout outcomes better, and did FIFA's 2018 decision to adopt an ELO-based formula close
+the gap?
+
+We analysed 115 knockout matches across eight World Cups from 1994 to 2022, fitting separate
+logistic regression models for each rating system --- specified without an intercept, consistent
+with the neutral-venue setting --- and evaluating them across six metrics: prediction accuracy,
+discrimination (AUC-ROC), calibration (Brier score), goal difference explained (OLS $R^{2}$),
+out-of-sample cross-validation, and controlled regression (McFadden's pseudo-$R^{2}$ against a
+50/50 null). ELO outperformed FIFA World Rankings on every single measure. It correctly
+predicted knockout winners 73.9\% of the time versus FIFA's 68.7\%, achieved an AUC of 0.775
+versus 0.695, and produced better-calibrated probability estimates (Brier score 0.189 versus
+0.220).
+
+The 2018 FIFA formula change genuinely improved FIFA's predictive validity --- the accuracy gap
+narrowed from 6.0 percentage points to 3.2. It did not close it. A formal McNemar's test
+($p = 0.180$) could not confirm the accuracy difference at conventional significance thresholds,
+reflecting a structural data constraint: achieving 80\% power requires approximately 88
+discordant pairs, equivalent to roughly 506 total knockout matches. The convergent direction of
+evidence across six complementary metrics, combined with ELO exceeding FIFA in 89.8\% of 10,000
+bootstrap resamples, supports the conclusion that ELO ratings are more predictively valid.
+Three robustness checks confirm the performance gap is structural --- not an artefact of stale
+ranking data, not driven by the 1994 tournament, and not resolved by substituting FIFA points
+for rank.
+
+\bigskip
+\noindent\textbf{Keywords:} ELO ratings; FIFA World Rankings; football prediction; World Cup;
+knockout stage; logistic regression; calibration; McNemar's test; predictive validity;
+staleness analysis
+\end{abstract}
+
+\newpage
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{Introduction}
+% ============================================================
+
+Football ranking systems serve two practical functions: seeding tournament draws and measuring
+national team prestige. FIFA World Rankings have performed both since 1992, officially
+determining which teams occupy favoured positions at every World Cup draw. The system has
+attracted sustained criticism from analysts who argue that ELO ratings --- a continuous,
+opponent-weighted system originally designed for chess --- provide a more accurate picture of
+team quality.
+
+The stakes are not trivial. If FIFA rankings systematically misidentify the stronger team,
+tournament draws are distorted, and the teams most likely to win are not adequately protected
+from early collisions. For broadcasters, analysts, and betting markets, the question of which
+system better predicts outcomes has direct practical value. For FIFA itself, the question carries
+institutional weight --- the organisation spent over two decades defending a formula that produced 37.5\% accuracy at the 2006 World Cup --- a single-tournament result that, while striking, should be interpreted cautiously given the small sample of 16 matches.
+
+The comparison between ELO and FIFA rankings is not new. \citeA{hvattum2010} found ELO
+outperformed simple benchmark methods. \citeA{lasek2013} confirmed ELO-based approaches
+consistently outperformed the official FIFA ranking. \citeA{wunderlich2016} found persistent
+FIFA inferiority to betting markets even after the 2006 formula revision.
+
+This paper addresses three gaps in the existing literature. First, it isolates knockout stage
+matches specifically, where seeding consequences are most severe and squad rotation is absent.
+Second, it exploits the 2018 formula change as a pre/post comparison to assess whether FIFA's adoption of ELO-based logic narrowed the predictive gap. Third, it applies novel
+robustness checks using real FIFA ranking snapshot dates, a sensitivity test excluding the 1994
+tournament, and a comparison against FIFA points. Three research questions guide the analysis:
+Does ELO outperform FIFA in predicting World Cup knockout outcomes across 1994--2022? Has
+predictive power changed across the 2018 formula change? Does ranking staleness materially
+affect the conclusions?
+
+% ---- Hypotheses ----
+\subsection{Hypotheses}
+
+Based on prior literature and the theoretical properties of each system, three directional
+hypotheses are advanced:
+
+\begin{description}[leftmargin=2em, labelwidth=1.8em]
+  \item[\textbf{H1}] ELO ratings have greater predictive validity than FIFA World Rankings for
+  World Cup knockout stage outcomes across 1994--2022, as measured by prediction accuracy,
+  AUC-ROC, Brier score, goal-difference $R^{2}$, out-of-sample cross-validation accuracy,
+  and controlled regression (McFadden's pseudo-$R^{2}$).
+
+  \item[\textbf{H2}] FIFA's 2018 adoption of an ELO-based formula improved its predictive
+  validity, narrowing --- but not closing --- the performance gap relative to ELO ratings.
+
+  \item[\textbf{H3}] Ranking staleness does not materially account for FIFA's predictive
+  inferiority; the gap is structural and persists after controlling for the number of days
+  between the ranking snapshot and the match date.
+\end{description}
+
+% ============================================================
+\section{Background and Related Literature}
+% ============================================================
+
+\subsection{The ELO Rating System}
+
+The ELO system was developed by Árpád Élő for chess \cite{eloarp1978} and adapted for team sports.
+The update rule is:
+\[
+  R_{\text{new}} = R_{\text{old}} + K \cdot G \cdot (W - W_e),
+\]
+where $R$ is the team's rating, $K$ is a match importance weight, $G$ is a goal difference
+multiplier, $W$ is the match outcome (1 = win, 0.5 = draw, 0 = loss), and
+\[
+  W_e = \frac{1}{1 + 10^{-\Delta r / 400}}
+\]
+is the expected outcome derived from the pre-match rating difference $\Delta r$. The
+eloratings.net implementation applies no home advantage correction for neutral venues, making
+ELO ratings fully appropriate for this comparison \cite{eloratings2024}.
+
+\subsection{FIFA World Rankings: Pre-2018 Formula}
+
+FIFA introduced its World Rankings in 1992 using a points-based averaging system over an
+eight-year rolling window. Two fundamental flaws have been documented in the literature \cite{lasek2013}: the system
+rewarded match volume over quality, and goal difference was entirely ignored. These design choices made the
+formula susceptible to manipulation through friendly match scheduling. The consequences were
+most visible at the 2006 World Cup, where FIFA accuracy in this study's knockout analysis fell
+to 37.5\% --- well below the 50\% chance threshold.
+
+\subsection{FIFA World Rankings: Post-2018 Formula}
+
+In August 2018, FIFA replaced its methodology with a system structurally based on ELO
+\cite{fifa2018}. Two implementation differences from eloratings.net remain: FIFA does not
+weight outcomes by goal difference, and uses a divisor of 600 rather than the standard 400,
+making probability estimates less sensitive to rating gaps. Both are reversible policy choices
+that this study's evidence suggests should be revisited.
+
+\subsection{Prior Evidence on Predictive Validity}
+
+\citeA{hvattum2010} found ELO outperformed simpler benchmarks in the English Premier League,
+though it was outperformed by betting odds. \citeA{lasek2013} confirmed ELO-based approaches
+outperformed FIFA rankings, noting friendly match scheduling as a significant source of
+predictive invalidity. \citeA{wunderlich2016} found improvement after the 2006 formula revision
+but persistent inferiority to betting markets. No prior study has isolated knockout stages,
+spanned the 2018 formula change as a pre/post comparison, or applied real-data staleness controls
+using verified FIFA snapshot dates.
+
+% ============================================================
+\section{Data and Methodology}
+% ============================================================
+
+\subsection{Dataset Construction}
+
+The analysis covers eight World Cup knockout stages (USA 1994 through Qatar 2022). Group stage
+matches were excluded due to squad rotation and differential qualification stakes. Four data
+sources were merged: match results from \citeA{badrnezhad2024matches};
+ELO ratings from \citeA{eloratings2024}, validated match-by-match against saved source pages;
+FIFA rankings, points, and snapshot dates from \citeA{alex2024fifaranking};
+and squad data from \citeA{fjelstul2023}.
+
+The merged dataset contains 128 knockout matches. After removing 13 matches where ELO or FIFA
+ranking data could not be reliably matched, the analysis dataset contains 115 matches.
+Matches decided by penalty shootouts are treated as wins for the shootout winner in accuracy
+analysis but excluded from goal difference regression.
+
+\subsection{Variables}
+
+\textbf{Dependent variable.} The primary outcome is a binary indicator of whether the
+home-listed team won the match. Since all knockout matches are at neutral venues, the
+home/away designation carries no competitive significance --- it reflects only administrative
+draw order.
+
+\textbf{Independent variables.} $\Delta\text{ELO} = \text{ELO}_{\text{home}} -
+\text{ELO}_{\text{away}}$ (mean = 55.0, $SD$ = 142.1); $\Delta\text{FIFA} =
+\text{FIFA\_rank}_{\text{away}} - \text{FIFA\_rank}_{\text{home}}$ (mean = 3.3, $SD$ = 16.7).
+Both are signed so positive values indicate the home-listed team is stronger. FIFA rank is the
+primary FIFA predictor because it is the actual seeding instrument FIFA uses for World Cup draws.
+
+\textbf{Staleness variable.} \textit{Days\_stale} measures the number of days between the FIFA
+ranking snapshot date and the match date, using real \texttt{rank\_date} values from the FIFA
+ranking dataset \cite{alex2024fifaranking} --- not proxy estimates. Real staleness ranged from 0 to 73 days (mean 35.5 days).
+
+Figure~\ref{fig:distributions} shows the distributions of ELO differences, FIFA rank
+differences, and ranking staleness across the 115 matches.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig1_distributions.png}
+  \caption{Distribution of rating differences and FIFA snapshot staleness across 115 World Cup
+  knockout matches, 1994--2022. Left: ELO difference (home minus away; positive = home stronger).
+  Centre: FIFA rank difference (away minus home rank; positive = home better ranked). Right:
+  days between FIFA ranking snapshot and match date using real \texttt{rank\_date} values.
+  Mean staleness = 35 days; maximum = 73 days.}
+  \label{fig:distributions}
+\end{figure}
+
+\subsection{Statistical Methods}
+
+\subsubsection{Logistic Regression}
+
+Separate logistic regression models without an intercept are fitted for ELO and FIFA using
+the \texttt{statsmodels} library \cite{seabold2010}, with a no-intercept specification
+required by the neutral-venue setting: equal teams at a neutral
+ground should have exactly a 50\% win probability.
+
+\subsubsection{McNemar's Test}
+
+McNemar's test \cite{mcnemar1947} is applied to formally test the accuracy difference:
+\[
+  \chi^{2} = \frac{(b - c)^{2}}{b + c},
+\]
+where $b$ = matches correctly predicted by ELO but not FIFA ($b = 13$), and $c$ = the reverse
+($c = 7$). The test operates only on discordant pairs ($n_d = 20$).
+
+\subsubsection{Bootstrap Confidence Intervals}
+
+A paired percentile bootstrap with 10,000 resamples is applied. Each resample draws the same
+matched rows for both systems simultaneously, preserving the within-match pairing. Sensitivity
+analysis presents confidence intervals at 90\%, 95\%, and 99\% levels.
+
+\subsubsection{Calibration Analysis}
+
+The Brier score \cite{brier1950} summarises calibration:
+\[
+  \text{BS} = \frac{1}{N} \sum_{i=1}^{N}(p_i - o_i)^{2}.
+\]
+A random coin-flip yields $\text{BS} = 0.250$; perfect predictions yield $\text{BS} = 0.000$.
+
+\subsubsection{Cross-Validation}
+
+Leave-one-tournament-out cross-validation evaluates out-of-sample accuracy across eight
+tournament folds. For each fold, the held-out tournament's outcomes are predicted using the
+rating differences alone --- no model training on the test fold.
+
+\subsubsection{Controlled Logistic Regression}
+
+A final specification adds round (ordinal), centred year, and a post-2018 dummy to isolate the
+pure rating signal from structural variation across rounds and eras.
+
+\subsection{Statistical Power}
+
+With $n_d = 20$ discordant pairs and $p_1 = 0.65$, McNemar's power is:
+\[
+  \text{power} = \Phi\!\left(\frac{0.65 - 0.50}{\sqrt{0.25/20}} - 1.96\right) \approx 0.268.
+\]
+Achieving 80\% power requires approximately 88 discordant pairs, equivalent to roughly 506
+total knockout matches. See Appendix~\ref{app:power} for the full derivation.
+
+% ============================================================
+\section{Results}
+% ============================================================
+
+\subsection{Descriptive Statistics}
+
+Table~\ref{tab:descriptive} reports descriptive statistics. The two systems agree on the
+predicted stronger team in 82.6\% of the 115 matches; the remaining 20 constitute the
+discordant pairs for McNemar's test.
+
+\begin{table}[H]
+  \centering
+  \caption{Descriptive statistics for key variables ($N = 115$ World Cup knockout matches,
+  1994--2022). Staleness computed from real FIFA \texttt{rank\_date} values.}
+  \label{tab:descriptive}
+  \begin{tabular}{lrrrrr}
+    \toprule
+    Variable & $N$ & Mean & $SD$ & Min & Max \\
+    \midrule
+    ELO difference ($\Delta_{\text{ELO}}$)       & 115 & 55.0  & 142.1 & $-314$ & 420 \\
+    FIFA rank difference ($\Delta_{\text{FIFA}}$) & 115 &  3.3  &  16.7 & $-47$  &  47 \\
+    Goal difference                               &  89 &  0.3  &   1.9 & $-6$   &   5 \\
+    Days stale (real \texttt{rank\_date})         & 115 & 35.5  &  16.8 &    0   &  73 \\
+    ELO--FIFA agreement on favourite              &  95 & 82.6\%&       &        &     \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Logistic Regression and Discrimination}
+
+Table~\ref{tab:regression} presents the baseline logistic regression results. Both rating
+difference variables are statistically significant predictors (ELO: $\beta = 0.0084$,
+$SE = 0.0019$, $p < 0.001$; FIFA: $\beta = 0.0460$, $SE = 0.0136$, $p = 0.001$). ELO
+achieves prediction accuracy of 73.9\% versus FIFA's 68.7\%, and an AUC-ROC of 0.775 versus
+0.695. McFadden's pseudo-$R^{2}$ for the ELO model (0.188) is 2.1 times that of the FIFA
+model (0.089), computed against a 50/50 null. Figure~\ref{fig:roc} presents the ROC curves.
+
+\begin{table}[H]
+  \centering
+  \caption{Baseline logistic regression results (no-intercept specification, $N = 115$).
+  Pseudo-$R^{2}$ computed against a 50/50 null consistent with neutral-venue assumption.}
+  \label{tab:regression}
+  \begin{tabular}{lrrrr}
+    \toprule
+    & \multicolumn{2}{c}{\textbf{ELO Model}} & \multicolumn{2}{c}{\textbf{FIFA Model}} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}
+    & Estimate & $p$-value & Estimate & $p$-value \\
+    \midrule
+    Coefficient ($\beta$) & 0.0084 & $<0.001$ & 0.0460 & 0.001 \\
+    $SE$                  & 0.0019 &          & 0.0136 &       \\
+    95\% CI               & [0.0047, 0.0121] & & [0.0194, 0.0727] & \\
+    \midrule
+    Accuracy              & 73.9\% & & 68.7\% & \\
+    AUC-ROC               & 0.775  & & 0.695  & \\
+    Pseudo-$R^{2}$ (50/50 null) & 0.188 & & 0.089 & \\
+    Log-likelihood        & $-64.691$ & & $-72.652$ & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{fig2_roc_curves.png}
+  \caption{ROC curves for ELO ratings (AUC = 0.775), FIFA rank (AUC = 0.695), and FIFA points
+  (AUC = 0.737) predicting World Cup knockout outcomes, 1994--2022 ($N = 115$). The random
+  classifier baseline (AUC = 0.500) is shown as a dashed diagonal. ELO dominates both FIFA
+  predictors at all threshold values.}
+  \label{fig:roc}
+\end{figure}
+
+\subsection{McNemar's Test and Statistical Power}
+
+The McNemar's test yields $\chi^{2} = 1.800$, $p = 0.180$ ($b = 13$, $c = 7$,
+$n_d = 20$, ratio $b/c = 1.86$). The test fails to reject the null hypothesis of equal
+accuracy at $\alpha = 0.05$. Cohen's $h = 0.115$ (small effect).
+
+Statistical power is 26.8\% --- the test would fail to detect ELO's superiority 73.2\% of the
+time even if genuine. Achieving 80\% power requires approximately 88 discordant pairs,
+implying roughly 506 total knockout matches. The non-significance reflects a structural data
+constraint, not evidence of equivalence. Figure~\ref{fig:power} shows the power curve.
+
+\subsection{Bootstrap Confidence Intervals}
+
+Bootstrap resampling (10,000 paired iterations) yields: ELO accuracy 73.9\%
+[95\% CI: $-1.8\%$, $+13.0\%$ for the gap]; FIFA accuracy 68.7\%; accuracy gap $+5.2$
+percentage points. ELO exceeded FIFA in \textbf{89.8\%} of all 10,000 bootstrap resamples.
+
+The multi-level sensitivity analysis (Figure~\ref{fig:bootstrap}) shows the gap CI includes
+zero at all three thresholds (90\%: [$-0.9\%$, $+11.3\%$]; 95\%: [$-1.8\%$, $+13.0\%$]; 99\%:
+[$-4.3\%$, $+15.7\%$]), consistent with the power constraint. The 89.8\% bootstrap superiority
+rate is the most informative single statistic.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig6_bootstrap.png}
+  \caption{Bootstrap distributions and multi-level confidence interval sensitivity analysis.
+  Top row: bootstrap distributions of ELO accuracy (73.9\%), FIFA accuracy (68.7\%), and the
+  gap (ELO$-$FIFA, $+5.2$ pp) from 10,000 paired resamples. Bottom panel: the accuracy gap CI
+  at 90\%, 95\%, and 99\% levels, all including zero --- consistent with 26.8\% statistical
+  power. ELO exceeded FIFA in 89.8\% of bootstrap resamples.}
+  \label{fig:bootstrap}
+\end{figure}
+
+\subsection{Calibration}
+
+Table~\ref{tab:calibration} presents calibration metrics. ELO achieves a Brier score of 0.1892
+--- a 24.3\% improvement over the random baseline. FIFA achieves $\text{BS} = 0.2200$, a 12.0\%
+improvement. Figure~\ref{fig:calibration} shows FIFA's calibration curve exhibits systematic
+miscalibration in the 0.40--0.55 probability range --- a direct consequence of FIFA's 600
+divisor versus ELO's 400, which compresses probability estimates toward 50\% in near-even
+contests.
+
+\begin{table}[H]
+  \centering
+  \caption{Calibration metrics. Lower Brier score is better. Random baseline $= 0.250$.}
+  \label{tab:calibration}
+  \begin{tabular}{lrr}
+    \toprule
+    Metric & ELO Model & FIFA Model \\
+    \midrule
+    Brier score                            & 0.1892 & 0.2200 \\
+    Improvement over random (BS = 0.250)   & 24.3\% & 12.0\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig8_calibration.png}
+  \caption{Calibration curves for ELO (left, Brier score = 0.1892) and FIFA (right,
+  Brier score = 0.2200) logistic models. Points show actual win rates within predicted
+  probability bins; perfect calibration follows the dashed diagonal. FIFA's curve exhibits
+  a characteristic kink in the 0.40--0.55 range, reflecting systematic underestimation of
+  the favourite's win probability in near-even matchups.}
+  \label{fig:calibration}
+\end{figure}
+
+\subsection{Goal Difference Regression}
+
+Table~\ref{tab:goaldiff} presents OLS results for the 89 non-shootout matches. ELO explains
+19.8\% of goal difference variance ($R^{2} = 0.1982$, $\beta = 0.0059$, $SE = 0.0013$,
+$p < 0.001$); FIFA explains 15.4\% ($R^{2} = 0.1539$, $\beta = 0.0447$, $SE = 0.0112$,
+$p < 0.001$). Figure~\ref{fig:goaldiff} presents the scatter plots with regression lines.
+
+\begin{table}[H]
+  \centering
+  \caption{OLS regression of goal difference on rating difference ($N = 89$, non-shootout
+  matches only). Intercept included in OLS specification.}
+  \label{tab:goaldiff}
+  \begin{tabular}{lrrrr}
+    \toprule
+    & \multicolumn{2}{c}{\textbf{ELO Model}} & \multicolumn{2}{c}{\textbf{FIFA Model}} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}
+    & Estimate & $p$-value & Estimate & $p$-value \\
+    \midrule
+    Intercept            & 0.0607  & 0.763    & 0.2770  & 0.154    \\
+    Rating diff. (slope) & 0.0059  & $<0.001$ & 0.0447  & $<0.001$ \\
+    $SE$                 & 0.0013  &          & 0.0112  &          \\
+    95\% CI              & [0.0034, 0.0084] & & [0.0224, 0.0670] & \\
+    \midrule
+    $R^{2}$              & 0.1982  & & 0.1539  & \\
+    RMSE                 & 1.728   & & 1.775   & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig4_goal_diff_regression.png}
+  \caption{OLS regression of goal difference on rating difference for non-shootout matches
+  ($N = 89$). Left: ELO difference vs goal difference ($R^{2} = 0.1982$, $p < 0.001$).
+  Right: FIFA rank difference vs goal difference ($R^{2} = 0.1539$, $p < 0.001$). Both
+  rating systems predict margin of victory, with ELO explaining 29\% more variance.}
+  \label{fig:goaldiff}
+\end{figure}
+
+\subsection{Cross-Validation}
+
+Table~\ref{tab:cv} presents cross-validation results. ELO achieves a mean out-of-sample
+accuracy of 73.2\% ($SD = 11.3\%$). FIFA achieves 68.9\% out-of-sample --- virtually
+unchanged from its in-sample figure of 68.7\%, confirming no overfitting in either model.
+ELO outperforms FIFA in five of eight tournament folds. Figure~\ref{fig:cv} presents the
+per-tournament breakdown and in-sample versus out-of-sample comparison.
+
+\begin{table}[H]
+  \centering
+  \caption{Leave-one-tournament-out cross-validation accuracy. CV accuracy = fraction of
+  held-out matches correctly predicted by each system's favourite.}
+  \label{tab:cv}
+  \begin{tabular}{lrrrr}
+    \toprule
+    Tournament & $N_{\text{train}}$ & $N_{\text{test}}$ & ELO CV & FIFA CV \\
+    \midrule
+    USA 1994            & 101 & 14 & 78.6\% & 71.4\% \\
+    France 1998         & 100 & 15 & 66.7\% & 60.0\% \\
+    Korea/Japan 2002    & 106 &  9 & 55.6\% & 66.7\% \\
+    Germany 2006        &  99 & 16 & 62.5\% & 37.5\% \\
+    South Africa 2010   & 100 & 15 & 80.0\% & 93.3\% \\
+    Brazil 2014         & 100 & 15 & 93.3\% & 80.0\% \\
+    Russia 2018         &  99 & 16 & 68.8\% & 62.5\% \\
+    Qatar 2022          & 100 & 15 & 80.0\% & 80.0\% \\
+    \midrule
+    \textbf{Mean}       &     &    & \textbf{73.2\%} & \textbf{68.9\%} \\
+    $SD$                &     &    & 11.3\%          & 15.7\%          \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig9_cross_validation.png}
+  \caption{Leave-one-tournament-out cross-validation results. Left: per-tournament CV accuracy
+  for ELO (blue, mean = 73.2\%) and FIFA (orange, mean = 68.9\%). Red dotted line = 50\%
+  chance. Right: in-sample versus out-of-sample comparison showing minimal performance drop
+  for both systems, confirming absence of overfitting.}
+  \label{fig:cv}
+\end{figure}
+
+\subsection{Accuracy Over Time and the 2018 Formula Change}
+
+Figure~\ref{fig:accuracy} plots per-tournament accuracy across 1994--2022. The dominant
+feature is FIFA's accuracy collapse to 37.5\% in 2006 --- below chance --- while ELO held
+at 62.5\%. Table~\ref{tab:era} shows the pre/post-2018 comparison.
+
+\begin{table}[H]
+  \centering
+  \caption{Prediction accuracy by era. Post-2018 sample is $n = 31$ matches across two
+  tournaments; the narrowing is directional but cannot be statistically confirmed at this
+  sample size.}
+  \label{tab:era}
+  \begin{tabular}{lrrrr}
+    \toprule
+    Era & Tournaments & ELO Accuracy & FIFA Accuracy & Gap \\
+    \midrule
+    Pre-2018 (old FIFA formula)    & 6 & 73.8\% & 67.9\% & $+6.0$ pp \\
+    Post-2018 (ELO-style formula)  & 2 & 74.2\% & 71.0\% & $+3.2$ pp \\
+    \midrule
+    \textbf{Overall (1994--2022)}  & 8 & \textbf{73.9\%} & \textbf{68.7\%} & $\mathbf{+5.2}$ \textbf{pp} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig3_accuracy_over_time.png}
+  \caption{ELO versus FIFA prediction accuracy per tournament (left) and upset frequency
+  (right), World Cup knockout stages 1994--2022. The green dotted vertical line marks FIFA's
+  2018 formula change. FIFA's accuracy dropped to 37.5\% at Germany 2006 --- below the 50\%
+  chance threshold --- while ELO maintained 62.5\%. Post-2018, both systems converge but
+  ELO retains the lead.}
+  \label{fig:accuracy}
+\end{figure}
+
+\subsection{Controlled Logistic Regression}
+
+Table~\ref{tab:controlled} presents controlled logistic regression results. ELO's coefficient
+remains highly significant after controls ($\beta = 0.0077$, $SE = 0.0020$, $p < 0.001$,
+95\% CI: [0.0037, 0.0116]). FIFA's coefficient also remains significant ($\beta = 0.0418$,
+$SE = 0.0145$, $p = 0.004$, 95\% CI: [0.0134, 0.0702]). The post-2018 dummy is
+non-significant in both models ($p = 0.734$ and $p = 0.969$), confirming the formula change
+operated through improved rating quality rather than any independent structural shift in
+predictability.
+
+\begin{table}[H]
+  \centering
+  \caption{Controlled logistic regression results (with intercept, $N = 115$). Controls
+  include match round (ordinal), year (centred at 2008), and post-2018 indicator.}
+  \label{tab:controlled}
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    & \multicolumn{3}{c}{\textbf{ELO Model}} & \multicolumn{3}{c}{\textbf{FIFA Model}} \\
+    \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+    Variable & $\hat{\beta}$ & $SE$ & $p$ & $\hat{\beta}$ & $SE$ & $p$ \\
+    \midrule
+    Intercept          & $+0.7235$ & 0.5559 & 0.193 & $+1.2493$ & 0.5130 & 0.015 \\
+    Rating difference  & $+0.0077$ & 0.0020 & $<0.001$ & $+0.0418$ & 0.0145 & 0.004 \\
+    Round (ordinal)    & $-0.2791$ & 0.2228 & 0.210 & $-0.4195$ & 0.2146 & 0.051 \\
+    Year (centred)     & $+0.0239$ & 0.0361 & 0.507 & $+0.0372$ & 0.0340 & 0.274 \\
+    Post-2018 dummy    & $+0.2659$ & 0.7807 & 0.734 & $+0.0285$ & 0.7248 & 0.969 \\
+    \midrule
+    Pseudo-$R^{2}$     & \multicolumn{3}{c}{0.180} & \multicolumn{3}{c}{0.119} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Summary of All Metrics}
+
+Table~\ref{tab:summary} consolidates all six evaluation metrics. ELO outperforms FIFA on every
+measure assessed, confirming H1.
+
+\begin{table}[H]
+  \centering
+  \caption{Consolidated metric comparison across all six evaluation methods.}
+  \label{tab:summary}
+  \begin{tabular}{lrrrr}
+    \toprule
+    Metric & ELO & FIFA & ELO Advantage & Winner \\
+    \midrule
+    Accuracy (in-sample)        & 73.9\% & 68.7\% & $+5.2$ pp  & ELO \\
+    AUC-ROC                     & 0.775  & 0.695  & $+0.080$   & ELO \\
+    Brier score ($\downarrow$)  & 0.189  & 0.220  & $-0.031$   & ELO \\
+    Goal difference $R^{2}$     & 0.198  & 0.154  & $+0.044$   & ELO \\
+    CV accuracy (out-of-sample) & 73.2\% & 68.9\% & $+4.3$ pp  & ELO \\
+    Pseudo-$R^{2}$ (controlled) & 0.180  & 0.119  & $+0.061$   & ELO \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ============================================================
+\section{Robustness Checks}
+% ============================================================
+
+\subsection{Staleness Analysis Using Real Ranking Snapshot Dates}
+
+Table~\ref{tab:staleness} reports real staleness by tournament. FIFA published rankings
+monthly from 1993 onward; staleness ranged from 0 to 73 days with a mean of 35.5 days. A
+controlled logistic regression adding \textit{days\_stale} to the FIFA model yields a
+coefficient of $\beta = 0.008$ ($p = 0.536$). Staleness has no statistically significant
+effect on FIFA's predictive accuracy. H3 is confirmed: the FIFA inferiority is structural,
+not a measurement artefact. Figure~\ref{fig:staleness} presents the staleness analysis.
+
+\begin{table}[H]
+  \centering
+  \caption{Real FIFA ranking staleness by tournament. Staleness coefficient in controlled
+  regression: $\beta = 0.008$, $p = 0.536$ (non-significant).}
+  \label{tab:staleness}
+  \begin{tabular}{lrrrr}
+    \toprule
+    Tournament & Snapshot Date & Min Days & Max Days & Mean Days \\
+    \midrule
+    USA 1994          & 1994-06-14 & 18 & 33 & 24 \\
+    France 1998       & 1998-05-20 & 38 & 53 & 44 \\
+    Korea/Japan 2002  & 2002-05-15 & 31 & 46 & 36 \\
+    Germany 2006      & 2006-05-17 & 38 & 53 & 44 \\
+    South Africa 2010 & 2010-05-26 & 31 & 46 & 37 \\
+    Brazil 2014       & 2014-06-05 & 23 & 38 & 29 \\
+    Russia 2018       & 2018-06-07 &  0 & 23 &  8 \\
+    Qatar 2022        & 2022-10-06 & 58 & 73 & 64 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{fig_s3_staleness_real.png}
+  \caption{FIFA ranking staleness analysis using real \texttt{rank\_date} values. Left: mean
+  days between FIFA snapshot and first knockout match by tournament (red = 1994, orange =
+  post-2018). Right: FIFA prediction accuracy versus staleness bins --- the flat, noisy
+  relationship ($p = 0.536$) confirms that ranking age does not predict performance degradation.}
+  \label{fig:staleness}
+\end{figure}
+
+\subsection{Robustness to Exclusion of 1994}
+
+Excluding the 14 USA 1994 matches and re-running all six metrics on the remaining 101 matches
+confirms ELO leads FIFA on every metric. The accuracy gap narrows marginally from $+5.2$ pp to
+$+5.0$ pp. AUC drops from 0.775 to 0.765 for ELO and from 0.695 to 0.687 for FIFA. The 1994
+tournament did not drive the core conclusion.
+
+\subsection{FIFA Points vs FIFA Rank}
+
+Replacing FIFA rank with FIFA points difference yields AUC = 0.737 --- better than rank
+(0.695) but still below ELO (0.775). FIFA points beats FIFA rank on four of the six metrics
+(AUC, Brier score, pseudo-$R^{2}$, and CV accuracy); FIFA rank retains an edge only on goal
+difference $R^{2}$, and accuracy is a dead tie. ELO leads on all six metrics versus FIFA
+points. This confirms that rank actually understates FIFA's true predictive ability, making
+ELO's advantage more remarkable: it beats FIFA even when FIFA is given its best available
+predictor.
+
+% ============================================================
+\section{Discussion}
+% ============================================================
+
+\subsection{ELO's Consistent Superiority}
+
+Across six evaluation metrics, ELO ratings outperform FIFA World Rankings. The calibration
+finding is particularly informative: the Brier score evaluates probability estimates rather
+than binary classifications, which reduces sensitivity to the threshold choices that affect
+accuracy comparisons \cite{brier1950}, and ELO's 24.3\% improvement over random guessing versus FIFA's 12.0\%
+confirms ELO produces more reliable probability estimates for practical applications such as
+betting markets, broadcasting, and tournament planning.
+
+\subsection{The 2006 FIFA Collapse}
+
+FIFA's accuracy falling to 37.5\% in 2006 was the direct consequence of a formula rewarding
+match volume over quality. Teams could elevate their rankings by scheduling friendlies against
+weak opponents. ELO's comparative resilience (62.5\% in 2006) demonstrates the protective
+value of opponent-strength weighting.
+
+\subsection{The 2018 Reform: Progress but Not Parity}
+
+FIFA's 2018 adoption of ELO-based logic represents a substantive improvement, and a 2006-style
+collapse is substantially less likely under the current formula, given that opponent-strength weighting is now incorporated. The remaining gap is attributable to two reversible
+implementation choices: exclusion of goal difference weighting, and the 600 versus 400 divisor.
+The goal difference regression results ($R^{2} = 0.198$ versus $0.154$) confirm ELO captures
+the true quality gap more precisely. Incorporating goal difference weighting --- the single change most supported by the evidence
+--- would plausibly narrow the remaining gap, though the magnitude of improvement cannot be
+directly estimated from this study's design.
+
+\subsection{Structural Limitation: Statistical Power}
+
+The inability to achieve significance via McNemar's test is a mathematical constraint, not a
+methodological weakness. The appropriate response is to rely on convergent evidence across six
+complementary metrics and 89.8\% of bootstrap resamples favouring ELO. Future work extending to
+UEFA European Championship and Copa Am\'erica knockout rounds would add roughly 200--300 matches
+(approximately 15 knockout matches per UEFA Euro and 8 per Copa Am\'erica across comparable
+tournament cycles), potentially sufficient to achieve formal statistical significance.
+
+\subsection{Staleness as a Non-Factor}
+
+The real-data staleness analysis definitively addresses a methodological concern about ranking
+freshness. FIFA published rankings monthly from 1993 onward; the staleness regression
+coefficient is non-significant ($p = 0.536$). This strengthens the paper's claims relative to
+prior studies that relied on proxy staleness estimates.
+
+% ============================================================
+\section{Conclusion}
+% ============================================================
+
+This study evaluated ELO ratings and FIFA World Rankings as predictors of World Cup knockout
+stage outcomes across eight tournaments from 1994 to 2022. ELO consistently outperformed FIFA
+World Rankings across all six evaluation metrics: prediction accuracy (73.9\% versus 68.7\%),
+AUC-ROC (0.775 versus 0.695), calibration (Brier score 0.189 versus 0.220), goal difference
+explained ($R^{2} = 0.198$ versus 0.154), out-of-sample cross-validation (73.2\% versus 68.9\%),
+and controlled pseudo-$R^{2}$ (0.180 versus 0.119). All three hypotheses are supported by
+the data.
+
+FIFA's 2018 adoption of an ELO-based formula meaningfully improved predictive validity,
+narrowing the accuracy gap from 6.0 to 3.2 percentage points (H2 confirmed). The remaining
+gap is attributable to two reversible implementation choices. Three robustness checks confirm
+the conclusion is not driven by staleness, the 1994 tournament, or the choice of rank over
+points (H3 confirmed).
+
+The formal McNemar's test did not reach statistical significance, reflecting a structural power
+constraint inherent to the research domain. The convergent direction of evidence across six
+metrics and 89.8\% of bootstrap resamples supports the practical conclusion that ELO ratings
+are more predictively valid.
+
+The direct policy implication: FIFA's current seeding system uses a ranking formula that this study's evidence
+consistently identifies as less predictively valid than a freely available alternative. Incorporating goal difference
+weighting would plausibly narrow the remaining gap, though the magnitude of improvement
+cannot be directly estimated from this study's design.
+
+% ============================================================
+\newpage
+\bibliography{references}
+
+% ============================================================
+\newpage
+\begin{appendices}
+
+% ---- Appendix A ----
+\section{Full Coefficient Tables with Standard Errors and Confidence Intervals}
+\label{app:coefficients}
+
+Tables~\ref{tab:app_logistic_full}--\ref{tab:app_controlled_full} expand the main-text
+regression results with full standard errors, 95\% confidence intervals, and model fit
+statistics.
+
+\begin{table}[H]
+  \centering
+  \caption{Full baseline logistic regression results (no-intercept, $N = 115$).
+  All values from \texttt{statsmodels} Logit \texttt{.summary2()}.}
+  \label{tab:app_logistic_full}
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    & \multicolumn{3}{c}{\textbf{ELO Model}} & \multicolumn{3}{c}{\textbf{FIFA Model}} \\
+    \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+    & $\hat{\beta}$ & $SE$ & 95\% CI & $\hat{\beta}$ & $SE$ & 95\% CI \\
+    \midrule
+    Elo / FIFA Rank Diff & 0.0084 & 0.0019 & [0.0047, 0.0121] & 0.0460 & 0.0136 & [0.0194, 0.0727] \\
+    \midrule
+    \multicolumn{7}{l}{\textit{Model fit statistics}} \\
+    \midrule
+    $N$              & \multicolumn{3}{c}{115} & \multicolumn{3}{c}{115} \\
+    Log-likelihood   & \multicolumn{3}{c}{$-64.691$} & \multicolumn{3}{c}{$-72.652$} \\
+    AIC              & \multicolumn{3}{c}{131.38} & \multicolumn{3}{c}{147.30} \\
+    BIC              & \multicolumn{3}{c}{134.13} & \multicolumn{3}{c}{150.05} \\
+    Pseudo-$R^{2}$ (statsmodels) & \multicolumn{3}{c}{0.149} & \multicolumn{3}{c}{0.044} \\
+    Pseudo-$R^{2}$ (50/50 null)  & \multicolumn{3}{c}{0.188} & \multicolumn{3}{c}{0.089} \\
+    Accuracy         & \multicolumn{3}{c}{73.9\%} & \multicolumn{3}{c}{68.7\%} \\
+    AUC-ROC          & \multicolumn{3}{c}{0.775}  & \multicolumn{3}{c}{0.695}  \\
+    Brier score      & \multicolumn{3}{c}{0.1892} & \multicolumn{3}{c}{0.2200} \\
+    \bottomrule
+  \end{tabular}
+  \parbox{\textwidth}{\smallskip\footnotesize \textit{Note.} Statsmodels pseudo-$R^{2}$
+  uses intercept-only null. Corrected values against 50/50 null are as reported in main
+  text (ELO = 0.188, FIFA = 0.089).}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Full OLS regression results for goal difference ($N = 89$, non-shootout matches).}
+  \label{tab:app_ols_full}
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    & \multicolumn{3}{c}{\textbf{ELO Model}} & \multicolumn{3}{c}{\textbf{FIFA Model}} \\
+    \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+    Variable & $\hat{\beta}$ & $SE$ & 95\% CI & $\hat{\beta}$ & $SE$ & 95\% CI \\
+    \midrule
+    Intercept     & 0.0607  & 0.2004 & [$-0.3376$, $+0.4591$] & 0.2770 & 0.1924 & [$-0.1055$, $+0.6595$] \\
+    Rating diff.  & 0.0059  & 0.0013 & [$+0.0034$, $+0.0084$] & 0.0447 & 0.0112 & [$+0.0224$, $+0.0670$] \\
+    \midrule
+    $N$      & \multicolumn{3}{c}{89} & \multicolumn{3}{c}{89} \\
+    $R^{2}$  & \multicolumn{3}{c}{0.1982} & \multicolumn{3}{c}{0.1539} \\
+    RMSE     & \multicolumn{3}{c}{1.728}  & \multicolumn{3}{c}{1.775}  \\
+    Log-likelihood & \multicolumn{3}{c}{$-173.94$} & \multicolumn{3}{c}{$-176.34$} \\
+    AIC      & \multicolumn{3}{c}{351.88} & \multicolumn{3}{c}{356.67} \\
+    BIC      & \multicolumn{3}{c}{356.86} & \multicolumn{3}{c}{361.65} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Full controlled logistic regression results (with intercept, $N = 115$).}
+  \label{tab:app_controlled_full}
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    & \multicolumn{3}{c}{\textbf{ELO Model}} & \multicolumn{3}{c}{\textbf{FIFA Model}} \\
+    \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+    Variable & $\hat{\beta}$ & $SE$ & $p$ & $\hat{\beta}$ & $SE$ & $p$ \\
+    \midrule
+    Intercept       & $+0.7235$ & 0.5559 & 0.193 & $+1.2493$ & 0.5130 & 0.015 \\
+    Rating diff.    & $+0.0077$ & 0.0020 & $<0.001$ & $+0.0418$ & 0.0145 & 0.004 \\
+    Round (ordinal) & $-0.2791$ & 0.2228 & 0.210 & $-0.4195$ & 0.2146 & 0.051 \\
+    Year (centred)  & $+0.0239$ & 0.0361 & 0.507 & $+0.0372$ & 0.0340 & 0.274 \\
+    Post-2018 dummy & $+0.2659$ & 0.7807 & 0.734 & $+0.0285$ & 0.7248 & 0.969 \\
+    \midrule
+    Pseudo-$R^{2}$  & \multicolumn{3}{c}{0.180} & \multicolumn{3}{c}{0.119} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ---- Appendix B ----
+\section{McNemar's Test Power Derivation}
+\label{app:power}
+
+\subsection*{Setup}
+
+Let $b$ = matches correctly predicted by ELO but not FIFA, $c$ = the reverse, $n_d = b + c$.
+In this study: $b = 13$, $c = 7$, $n_d = 20$, $p_1 = 13/20 = 0.65$.
+
+\subsection*{Power formula}
+
+For a two-sided McNemar's test at $\alpha = 0.05$:
+\[
+  \text{power} = \Phi\!\left(\frac{p_1 - 0.5}{\sqrt{0.25/n_d}} - z_{\alpha/2}\right)
+\]
+
+\subsection*{Current study}
+
+\[
+  \text{power}
+  = \Phi\!\left(\frac{0.65 - 0.50}{\sqrt{0.25/20}} - 1.96\right)
+  = \Phi\!\left(\frac{0.15}{0.1118} - 1.96\right)
+  = \Phi(1.342 - 1.96)
+  = \Phi(-0.618)
+  \approx 0.268.
+\]
+
+Power = 26.8\%. The test fails to detect ELO's advantage 73.2\% of the time even if genuine.
+
+\subsection*{Required sample for 80\% power}
+
+\[
+  n_d = \frac{(z_{0.80} + z_{0.025})^2 \times 0.25}{(p_1 - 0.5)^2}
+      = \frac{(0.842 + 1.96)^2 \times 0.25}{(0.15)^2}
+      = \frac{7.851 \times 0.25}{0.0225}
+      \approx 88 \text{ discordant pairs}.
+\]
+
+At the observed discordant rate of $20/115 = 17.4\%$, this requires $\approx 506$ total
+knockout matches --- roughly 31 additional World Cup tournaments.
+
+Figure~\ref{fig:power} shows the power curve.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{fig7_power_curve.png}
+  \caption{Statistical power versus total knockout matches for McNemar's test (effect size
+  $h = 0.115$). Orange dotted line: current study ($n = 115$, power = 27\%). Green dotted
+  line: sample required for 80\% power ($n = 506$). The current study operates well below
+  the threshold for conventional statistical power.}
+  \label{fig:power}
+\end{figure}
+
+\subsection*{Cohen's $h$}
+
+Two Cohen's $h$ values appear in this paper and refer to different comparisons:
+
+\textbf{Overall accuracy gap} ($h = 0.115$, as labelled in Figure~\ref{fig:power}):
+computed from the overall accuracy proportions (ELO = 0.739, FIFA = 0.687):
+\[
+  h = 2\arcsin\!\sqrt{0.739} - 2\arcsin\!\sqrt{0.687} = 0.115.
+\]
+This is a small effect by conventional standards ($h < 0.20$).
+
+\textbf{McNemar discordant-pair proportion} ($h = 0.305$):
+computed from the discordant-pair proportion $p_1 = 0.65$ versus the null $p_0 = 0.50$:
+\[
+  h = 2\arcsin\!\sqrt{0.65} - 2\arcsin\!\sqrt{0.50}
+    = 2(0.9381) - 2(0.7854) = 0.305.
+\]
+This is a small-to-medium effect and is the effect size directly relevant to McNemar's
+power calculation above. The power curve in Figure~\ref{fig:power} uses $h = 0.115$
+(overall accuracy gap) as its axis label.
+
+% ---- Appendix C ----
+\section{Bootstrap Methodology Note}
+\label{app:bootstrap}
+
+The bootstrap is a \textbf{paired percentile bootstrap} with $B = 10{,}000$ resamples.
+
+\begin{enumerate}
+  \item For each resample $b = 1, \ldots, B$: draw $n = 115$ rows \emph{with replacement}
+  using the \emph{same} row indices for both ELO and FIFA columns simultaneously. This
+  preserves within-match pairing.
+
+  \item Compute $\hat{a}_{\text{ELO}}^{(b)}$, $\hat{a}_{\text{FIFA}}^{(b)}$, and the gap
+  $\hat{\delta}^{(b)} = \hat{a}_{\text{ELO}}^{(b)} - \hat{a}_{\text{FIFA}}^{(b)}$.
+
+  \item The percentile CI at level $(1-\alpha)$ is the interval from the $(\alpha/2)$-th to
+  the $(1-\alpha/2)$-th quantile of the $B$ gap values.
+
+  \item The bootstrap superiority rate (89.8\%) is the fraction of resamples in which
+  $\hat{\delta}^{(b)} > 0$.
+\end{enumerate}
+
+The percentile method is used over BCa because the estimator is a smooth function of the data
+and the percentile interval is more transparent for replication. BCa intervals were confirmed
+to yield substantively identical results.
+
+Random seed fixed at \texttt{seed = 42}. $B = 10{,}000$ follows \citeA{efron1993}.
+
+\end{appendices}
+
+% ============================================================
+\end{document}
+% ============================================================

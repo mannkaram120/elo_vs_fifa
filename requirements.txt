@@ -1,0 +1,27 @@
+# FIFA vs ELO — Python Dependencies
+# 
+# These are the package versions used in the analysis.
+# To install: pip install -r requirements.txt
+#
+# If you want to check your current versions run: pip freeze
+# Python 3.10+ recommended
+
+# Core data
+pandas==2.1.4
+numpy==1.26.4
+
+# Statistical modelling
+statsmodels==0.14.1
+scipy==1.12.0
+scikit-learn==1.4.0
+
+# Visualisation
+matplotlib==3.8.2
+seaborn==0.13.2
+
+# Notebook support (optional — only needed if running .ipynb files)
+jupyter==1.0.0
+ipykernel==6.29.2
+
+# Utilities
+tqdm==4.66.2
