@@ -162,11 +162,5 @@ SSRN preprint: [link to be updated]
 
 Karamjeet Singh  
 Independent Researcher, New Delhi, India  
-[Your LinkedIn or email here]
+[LinkedIn — Karamjeet Singh](https://www.linkedin.com/in/karamjeet-singh12/)
 
----
-
-## License
-
-Code: MIT License  
-Data: Please refer to original data sources for their respective licences.
