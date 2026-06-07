@@ -3,7 +3,7 @@
 **Replication package for:**
 > Singh, K. (2026). FIFA Rankings vs ELO Ratings: Predictive Validity in World Cup Knockout Stages (1994–2022). Independent Researcher, New Delhi, India.
 
-📄 **Preprint:** [SSRN — link to be updated]  
+📄 **Preprint:** [SSRN — link to be updated] | [Zenodo](https://doi.org/10.5281/zenodo.20580956) | [ResearchGate](https://doi.org/10.13140/RG.2.2.16267.45609) 
 📊 **Status:** Under review
 
 ---
@@ -154,6 +154,8 @@ If you use this replication package, please cite:
 Singh, K. (2026). FIFA Rankings vs ELO Ratings: Predictive Validity in 
 World Cup Knockout Stages (1994–2022). Independent Researcher, New Delhi, India.
 SSRN preprint: [link to be updated]
+Zenodo DOI: https://doi.org/10.5281/zenodo.20580956
+ResearchGate DOI: https://doi.org/10.13140/RG.2.2.16267.45609
 ```
 
 ---
